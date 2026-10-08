@@ -119,7 +119,7 @@ export default function App() {
             ref={fileInputRef}
             className="hidden-input"
             type="file"
-            accept=".xlsx,.xls"
+            accept=".xlsx"
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) void handleImport(file);
