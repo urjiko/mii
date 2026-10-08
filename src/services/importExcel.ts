@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import { readSheet } from 'read-excel-file/browser';
 import { db } from '../db/database';
 import type { CharacterRecord, Score, TraitScores } from '../types/domain';
 
@@ -37,15 +37,19 @@ function mapTraits(row: RawRow): TraitScores {
 }
 
 export async function importExcel(file: File): Promise<number> {
-  const bytes = await file.arrayBuffer();
-  const workbook = XLSX.read(bytes, { type: 'array' });
-  const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+  const sheetRows = await readSheet(file);
 
-  if (!firstSheet) {
+  if (sheetRows.length === 0) {
     throw new Error('Excel dosyasında okunabilir bir sayfa bulunamadı.');
   }
 
-  const rows = XLSX.utils.sheet_to_json<RawRow>(firstSheet, { defval: null });
+  const headers = sheetRows[0].map((cell) => String(cell ?? '').trim());
+  const rows: RawRow[] = sheetRows.slice(1).map((cells) =>
+    Object.fromEntries(
+      headers.map((header, index) => [header, cells[index] ?? null]),
+    ),
+  );
+
   const now = new Date().toISOString();
   const characters: CharacterRecord[] = [];
 
