@@ -47,30 +47,29 @@ export async function importExcel(file: File): Promise<number> {
 
   const rows = XLSX.utils.sheet_to_json<RawRow>(firstSheet, { defval: null });
   const now = new Date().toISOString();
+  const characters: CharacterRecord[] = [];
 
-  const characters: CharacterRecord[] = rows
-    .map((row, index) => {
-      const displayName = String(
-        row['Display Name'] ?? row['İsim'] ?? row['Name'] ?? '',
-      ).trim();
+  rows.forEach((row, index) => {
+    const displayName = String(
+      row['Display Name'] ?? row['İsim'] ?? row['Name'] ?? '',
+    ).trim();
 
-      if (!displayName) return null;
+    if (!displayName) return;
 
-      return {
-        id: crypto.randomUUID(),
-        displayName,
-        primaryLocationId: 'plaza',
-        traits: mapTraits(row),
-        personalValue: null,
-        favorite: false,
-        pinned: false,
-        status: 'active' as const,
-        appearance: createAppearance(index),
-        createdAt: now,
-        updatedAt: now,
-      };
-    })
-    .filter((value): value is CharacterRecord => Boolean(value));
+    characters.push({
+      id: String(crypto.randomUUID()),
+      displayName,
+      primaryLocationId: 'plaza',
+      traits: mapTraits(row),
+      personalValue: null,
+      favorite: false,
+      pinned: false,
+      status: 'active',
+      appearance: createAppearance(index),
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
 
   await db.transaction('rw', db.characters, db.history, async () => {
     await db.history.clear();
@@ -78,7 +77,7 @@ export async function importExcel(file: File): Promise<number> {
     await db.characters.bulkAdd(characters);
     await db.history.bulkAdd(
       characters.map((character) => ({
-        id: crypto.randomUUID(),
+        id: String(crypto.randomUUID()),
         characterId: character.id,
         type: 'IMPORT' as const,
         note: 'Excel import',
